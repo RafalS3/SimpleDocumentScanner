@@ -1,0 +1,3 @@
+/home/rafal/SimpleDocumentScanner/CMakeFiles/docScanner.dir
+/home/rafal/SimpleDocumentScanner/CMakeFiles/edit_cache.dir
+/home/rafal/SimpleDocumentScanner/CMakeFiles/rebuild_cache.dir
