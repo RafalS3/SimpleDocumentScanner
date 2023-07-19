@@ -6,9 +6,10 @@
 
 using namespace cv;
 using namespace std; 
-Mat imgOrg, imgDil, imgGray, imgCanny, imgBlur, preImg;
+Mat imgOrg, imgDil, imgGray, imgCanny, imgBlur, preImg, imgWarp;
+float w = 620, h = 627;
 string path = "Resources/doc1.jpg";
-vector<Point> initialPoints;
+vector<Point> initialPoints, docPoints;
 Mat preProcess(Mat img)
 {
   cvtColor(img, imgGray, COLOR_BGR2GRAY);
@@ -32,7 +33,7 @@ vector<Point> getContours(Mat preImg)
   for(int i = 0; i < contours.size(); ++i)
   {
     int area = contourArea(contours[i]);
-    if(area >= 1000)
+    if(area >= 17000)
     {
       float peri = arcLength(contours[i], true);
       approxPolyDP(contours[i], cornPoly[i], 0.02*peri, true);
@@ -41,7 +42,7 @@ vector<Point> getContours(Mat preImg)
           biggestPoints = {cornPoly[i][0], cornPoly[i][1], cornPoly[i][2], cornPoly[i][3]};
           maxArea = area;
         }
-      drawContours(preImg, cornPoly, i, Scalar(255, 0, 255), 2);
+      drawContours(imgOrg, cornPoly, i, Scalar(255, 0, 255), 2);
     }
   }
   return biggestPoints;
@@ -52,18 +53,47 @@ void drawPoints(vector<Point> points, Scalar color)
   for(int i = 0; i < points.size(); ++i)
   {
     circle(imgOrg, points[i], 10, color, FILLED);
-    putText(imgOrg, to_string(i + 1), points[i], FONT_HERSHEY_PLAIN, 5, color, 2);
+    putText(imgOrg, to_string(i), points[i], FONT_HERSHEY_PLAIN, 5, color, 2);
   }
 }
 
+vector<Point> reorder(vector<Point> points)
+{
+  vector<Point> newPoints;
+  vector<int> sumPoints, subPoints;
+  for(int i = 0; i < 4; ++i)
+  {
+    sumPoints.push_back(points[i].x + points[i].y);
+    subPoints.push_back(points[i].x - points[i].y);
+  }
+  newPoints.push_back(points[min_element(sumPoints.begin(), sumPoints.end()) - sumPoints.begin()]);
+  newPoints.push_back(points[max_element(subPoints.begin(), subPoints.end()) - subPoints.begin()]);
+  newPoints.push_back(points[min_element(subPoints.begin(), subPoints.end()) - subPoints.begin()]);
+  newPoints.push_back(points[max_element(sumPoints.begin(), sumPoints.end()) - sumPoints.begin()]);
+ return newPoints;
+
+}
+
+Mat getWarp(Mat img, vector<Point> docPoints, float w, float h)
+{
+  Point2f src[4] = { docPoints[0], docPoints[1], docPoints[2], docPoints[3] };
+  Point2f dst[4] = { {0.0f, 0.0f}, {w, 0.0f}, {0.0f, h}, {w, h} };
+  
+  Mat matrix = getPerspectiveTransform(src, dst);
+  warpPerspective(img, imgWarp, matrix, Point(w, h));
+  return imgWarp;
+}
 int main()
 {
 imgOrg = imread(path);
 //Preprocess
 preImg = preProcess(imgOrg);
 initialPoints = getContours(preImg);
-drawPoints(initialPoints, Scalar(0, 0, 255));
-imshow("points", imgOrg);
+docPoints = reorder(initialPoints);
+//drawPoints(docPoints, Scalar(0, 0, 255));
+imgWarp = getWarp(imgOrg, docPoints, w, h);
+
+imshow("points", imgWarp);
 waitKey(0);
 return 0;
 }
